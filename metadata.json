@@ -1,0 +1,6 @@
+{
+  "name": "Cicada Tube",
+  "description": "A global video-sharing platform where users watch, upload, stream, and monetize content including entertainment, education, music, gaming, news, and live broadcasts anytime online.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
