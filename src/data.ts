@@ -130,6 +130,68 @@ export const SEED_VIDEOS: Video[] = [
     comments: [
       { id: "c11", author: "OscillatorUser", avatarColor: "bg-purple-600", text: "This content alone is worth my Premium subscription! That custom noise bandpass is extremely clean.", likes: 218, timestamp: "5 days ago" }
     ]
+  },
+  {
+    id: "v-cicada-doc",
+    title: "BROOD XIX: The Great Mid-Atlantic Swarm Documentary (4K)",
+    description: "After 17 long years under the forest soil, millions of Brood XIX periodical cicadas arise synchronously under precise temperature triggers. Shot on ultra high definition macro lenses, explore the final molt, mass chorus, and egg excavation processes of the spectacular Magicicada septendecim.",
+    category: VideoCategory.EDUCATION,
+    duration: "18:45",
+    views: 742000,
+    likes: 52000,
+    uploaderName: "Cicada Creator",
+    uploaderSubscribers: 920000,
+    uploadedAt: "1 day ago",
+    videoUrl: "education_science",
+    thumbnailUrl: "https://images.unsplash.com/photo-1576489922094-2cfe89fb1733?auto=format&fit=crop&q=80&w=600",
+    isPremium: false,
+    monetized: true,
+    earnings: 1845.00,
+    comments: [
+      { id: "cc1", author: "NatureLover", avatarColor: "bg-teal-600", text: "Stunning 4K macro footage. The transition of the final molt is absolutely hypnotic!", likes: 450, timestamp: "20 hours ago" },
+      { id: "cc2", author: "AcousticFly", avatarColor: "bg-emerald-600", text: "The detail of the tymbal muscle movement is brilliant.", likes: 124, timestamp: "15 hours ago" }
+    ]
+  },
+  {
+    id: "v-cicada-music",
+    title: "Harmonizing with the Swarm: Ambient Field Recording & Woodwind",
+    description: "A live, continuous dialogue between acoustic woodwind flute and the active 7.5 kHz chorus of billions of high-amplitude cicadas in the deep forest canopy. Unfiltered, expansive, and deeply meditative natural frequency waves designed to sync bio-frequency nodes.",
+    category: VideoCategory.MUSIC,
+    duration: "42:00",
+    views: 1250000,
+    likes: 93400,
+    uploaderName: "Cicada Creator",
+    uploaderSubscribers: 920000,
+    uploadedAt: "3 days ago",
+    videoUrl: "music_lofi",
+    thumbnailUrl: "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&q=80&w=600",
+    isPremium: false,
+    monetized: true,
+    earnings: 3820.00,
+    comments: [
+      { id: "cc3", author: "ZenLarva", avatarColor: "bg-blue-500", text: "This woodwind frequency response alongside the natural cicada drone is extremely calming. Perfect study focus stream.", likes: 820, timestamp: "2 days ago" },
+      { id: "cc4", author: "PulseAcoustic", avatarColor: "bg-purple-500", text: "Fascinating phasing effect when the flute hits their exact stride frequency!", likes: 310, timestamp: "1 day ago" }
+    ]
+  },
+  {
+    id: "v-cicada-decibels",
+    title: "Entomologist Reaction: Can a Swarm Generate Enough Decibels to Deafen?",
+    description: "We measure sound pressure of a synchronous Brood XIX emergence inside the epicentre tree line. From dBA sound meters reading over 95dB to scientific analysis of tymbal buckling physics, we test the limits of natural insect sound.",
+    category: VideoCategory.NEWS,
+    duration: "11:12",
+    views: 89000,
+    likes: 5400,
+    uploaderName: "Cicada Creator",
+    uploaderSubscribers: 920000,
+    uploadedAt: "5 days ago",
+    videoUrl: "news_report",
+    thumbnailUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=85&w=600",
+    isPremium: false,
+    monetized: true,
+    earnings: 120.00,
+    comments: [
+      { id: "cc5", author: "dB_Meter_Expert", avatarColor: "bg-amber-600", text: "95dB is literally the volume of a power lawnmower! Unbelievable biological engineering.", likes: 98, timestamp: "4 days ago" }
+    ]
   }
 ];
 

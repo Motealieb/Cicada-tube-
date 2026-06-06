@@ -28,6 +28,9 @@ interface VideoFeedProps {
   isPremiumUser: boolean;
   onNavigateToUser: (username: string) => void;
   recommendedVideos: { video: Video; reason: string }[];
+  isGuest?: boolean;
+  onRegisterClick?: () => void;
+  watchProgress?: Record<string, number>;
 }
 
 export default function VideoFeed({
@@ -37,6 +40,9 @@ export default function VideoFeed({
   isPremiumUser,
   onNavigateToUser,
   recommendedVideos,
+  isGuest = true,
+  onRegisterClick,
+  watchProgress,
 }: VideoFeedProps) {
   const [selectedCategory, setSelectedCategory] = useState<VideoCategory>(VideoCategory.ALL);
 
@@ -75,6 +81,43 @@ export default function VideoFeed({
 
   return (
     <div id="video-feed-container" className="flex flex-col space-y-8 animate-fade-in">
+      {/* Top Category Filter Bar */}
+      <div 
+        id="top-category-filter-bar" 
+        className="bg-zinc-950/60 backdrop-blur-md border border-zinc-900 p-4 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xl"
+      >
+        <div className="flex flex-col text-left">
+          <span className="font-mono text-[8px] font-extrabold text-[#10b981] uppercase tracking-widest block mb-0.5">
+            Transmission Tuning
+          </span>
+          <h2 className="font-sans text-xs font-bold text-white uppercase tracking-wider">
+            Signal Feed Filter
+          </h2>
+        </div>
+        
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none">
+          {categories.map((category) => {
+            const isSelected = selectedCategory === category;
+            const icon = category === VideoCategory.ALL ? <Compass className="h-3.5 w-3.5 shrink-0" /> : getCategoryIcon(category);
+            return (
+              <button
+                key={`top-pill-${category}`}
+                id={`top-pill-${category.toLowerCase().replace(/\s+/g, "-")}`}
+                onClick={() => setSelectedCategory(category)}
+                className={`flex items-center space-x-1.5 shrink-0 rounded-xl py-1.5 px-3.5 text-xs font-bold transition-all duration-200 active:scale-95 cursor-pointer ${
+                  isSelected
+                    ? "bg-gradient-to-r from-emerald-500 to-teal-400 text-zinc-950 shadow-[0_4px_15px_rgba(16,185,129,0.2)]"
+                    : "bg-zinc-900 hover:bg-zinc-850 text-zinc-400 hover:text-zinc-100 border border-zinc-850"
+                }`}
+              >
+                {icon}
+                <span>{category}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Immersive Featured Hero Banner */}
       <div
         id="feed-featured-hero"
@@ -112,6 +155,41 @@ export default function VideoFeed({
           <Play className="h-5.5 w-5.5 fill-black pl-0.5" />
         </button>
       </div>
+
+      {/* Onboarding Registration Banner Invitation */}
+      {isGuest && onRegisterClick && (
+        <div 
+          id="registration-onboarding-banner" 
+          onClick={onRegisterClick}
+          className="bg-gradient-to-r from-emerald-950/20 via-zinc-950/90 to-zinc-950 border border-emerald-500/20 p-5 rounded-3xl flex flex-col md:flex-row md:items-center justify-between gap-5 shadow-2xl hover:border-emerald-500/45 cursor-pointer hover:shadow-[0_4px_30px_-5px_rgba(16,185,129,0.12)] transition duration-300"
+        >
+          <div className="flex items-start space-x-4">
+            <div className="p-3 bg-emerald-500/10 rounded-2xl border border-emerald-500/20 text-emerald-400 shrink-0 mt-0.5">
+              <Radio className="h-5.5 w-5.5 text-emerald-400 animate-pulse" />
+            </div>
+            <div className="text-left">
+              <span className="font-mono text-[8px] font-bold text-emerald-400 uppercase tracking-widest block">
+                Signal Integration Hub
+              </span>
+              <h4 className="font-sans text-sm font-bold text-white mt-0.5">
+                Harmonize your custom Transmitter Node!
+              </h4>
+              <p className="font-sans text-xs text-zinc-400 mt-1.5 leading-normal max-w-xl font-medium">
+                Broadcasters and explorers: choose your frequency spectrum nodes, customize your public bios, claim virtual wallet seeding, and track subscriber signals by configuring your transceiver node.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onRegisterClick();
+            }}
+            className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-500 to-teal-400 font-sans text-xs font-bold text-zinc-950 hover:from-emerald-400 hover:to-teal-300 transition shrink-0 shadow-lg active:scale-95 cursor-pointer font-extrabold"
+          >
+            Create Transmitter Identity
+          </button>
+        </div>
+      )}
 
       {/* Dynamic Personalized Recommendations Shelf */}
       {searchQuery.trim() === "" && recommendedVideos && recommendedVideos.length > 0 && (
@@ -152,6 +230,16 @@ export default function VideoFeed({
                     <div className="absolute inset-0 bg-transparent flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-zinc-950/30">
                       <Play className="h-6 w-6 text-emerald-400 shrink-0" />
                     </div>
+
+                    {/* Progress indicator bar */}
+                    {watchProgress && watchProgress[video.id] !== undefined && watchProgress[video.id] > 0 && (
+                      <div className="absolute bottom-0 left-0 w-full h-[4px] bg-zinc-900/85 z-20 overflow-hidden">
+                        <div
+                          className="h-full bg-emerald-500 transition-all duration-300 rounded-r"
+                          style={{ width: `${watchProgress[video.id]}%` }}
+                        />
+                      </div>
+                    )}
                   </div>
 
                   <h3 className="font-sans text-xs font-bold text-zinc-100 line-clamp-1 group-hover:text-emerald-400 transition mt-2">
@@ -298,6 +386,16 @@ export default function VideoFeed({
                       </svg>
                     </div>
                   </div>
+
+                  {/* Progress indicator bar */}
+                  {watchProgress && watchProgress[video.id] !== undefined && watchProgress[video.id] > 0 && (
+                    <div className="absolute bottom-0 left-0 w-full h-[4px] bg-zinc-900/85 z-20 overflow-hidden">
+                      <div
+                        className="h-full bg-emerald-500 transition-all duration-300 rounded-r"
+                        style={{ width: `${watchProgress[video.id]}%` }}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Details layout */}

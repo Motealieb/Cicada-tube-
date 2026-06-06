@@ -38,6 +38,7 @@ interface UserProfileProps {
   // Notifications setting
   bellSubscriptions: string[];
   onToggleBellSubscription: (channel: string) => void;
+  watchProgress?: Record<string, number>;
 }
 
 export default function UserProfile({
@@ -52,6 +53,7 @@ export default function UserProfile({
   onSaveBio,
   bellSubscriptions,
   onToggleBellSubscription,
+  watchProgress,
 }: UserProfileProps) {
   const isMe = username === loggedInUsername;
   const isSubscribed = subscribedUploaders.includes(username);
@@ -293,6 +295,16 @@ export default function UserProfile({
                       <div className="absolute inset-0 bg-transparent flex items-center justify-center opacity-0 group-hover:opacity-100 transition bg-zinc-950/30">
                         <Play className="h-8 w-8 text-emerald-400 shrink-0" />
                       </div>
+
+                      {/* Watch progress indicator bar */}
+                      {watchProgress && watchProgress[video.id] !== undefined && watchProgress[video.id] > 0 && (
+                        <div className="absolute bottom-0 left-0 w-full h-[4px] bg-zinc-900/85 z-20 overflow-hidden">
+                          <div
+                            className="h-full bg-emerald-500 transition-all duration-300 rounded-r"
+                            style={{ width: `${watchProgress[video.id]}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
                     <div className="p-3">
                       <h4 className="font-sans text-xs font-bold text-zinc-200 line-clamp-1 group-hover:text-emerald-400 transition">

@@ -71,11 +71,24 @@ export interface UserWallet {
   premiumCost: number;
   history: {
     id: string;
-    type: "tip_sent" | "tip_received" | "ad_earning" | "premium_sub" | "withdrawal" | "premium_unlock";
+    type: "tip_sent" | "tip_received" | "ad_earning" | "premium_sub" | "withdrawal" | "premium_unlock" | "ad_spend";
     amount: number;
     description: string;
     date: string;
   }[];
+}
+
+export interface Advertisement {
+  id: string;
+  brandName: string;
+  slogan: string;
+  actionText: string;
+  themeColor: "amber" | "emerald" | "crimson" | "blue";
+  cost: number;
+  creator: string;
+  impressions: number;
+  clicks: number;
+  createdAt: string;
 }
 
 export interface UserProfile {

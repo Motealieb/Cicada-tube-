@@ -25,6 +25,11 @@ interface HeaderProps {
   // Search suggestion integration
   videos?: Video[];
   onSelectVideo?: (video: Video) => void;
+
+  // Pi authentication integration
+  piUser?: { username: string; uid: string } | null;
+  piAuthLoading?: boolean;
+  onPiAuthTrigger?: () => void;
 }
 
 export default function Header({
@@ -41,6 +46,9 @@ export default function Header({
   onSelectNotification,
   videos,
   onSelectVideo,
+  piUser = null,
+  piAuthLoading = false,
+  onPiAuthTrigger,
 }: HeaderProps) {
   const [showNotifications, setShowNotifications] = useState<boolean>(false);
   const unreadCount = notifications.filter((n) => !n.read).length;
@@ -224,11 +232,71 @@ export default function Header({
             setActiveTab("home");
           }}
         >
-          <div className="w-8 h-8 bg-emerald-500 rounded-lg flex items-center justify-center shadow-[0_0_12px_rgba(16,185,129,0.3)]">
-            <div className="w-4 h-4 border-2 border-white rounded-full opacity-80" />
+          {/* Beautiful Gold Cicada SVG Logo matching the uploaded design */}
+          <div className="w-10 h-10 flex items-center justify-center filter drop-shadow-[0_0_10px_rgba(234,179,8,0.35)] hover:scale-105 transition-transform duration-250">
+            <svg viewBox="0 0 100 100" className="w-full h-full" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fff8d2" />
+                  <stop offset="30%" stopColor="#e5b83b" />
+                  <stop offset="70%" stopColor="#a37617" />
+                  <stop offset="100%" stopColor="#fded9d" />
+                </linearGradient>
+                <linearGradient id="goldWing" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#fff0a5" />
+                  <stop offset="50%" stopColor="#d4a325" />
+                  <stop offset="100%" stopColor="#966d11" />
+                </linearGradient>
+              </defs>
+              
+              {/* Gold outer circle framing with exact creative cutouts/progress bar */}
+              {/* Right half of the gold circle */}
+              <path d="M 50,14 A 36,36 0 0,1 50,86" stroke="url(#goldGrad)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              {/* Top-left golden segment */}
+              <path d="M 50,14 A 36,36 0 0,0 14,50" stroke="url(#goldGrad)" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              {/* Bottom-left red video scrub progress segment */}
+              <path d="M 14,50 A 36,36 0 0,0 42,85.5" stroke="#ef4444" strokeWidth="2.5" fill="none" strokeLinecap="round" />
+              {/* Interactive seeking dot on the progress track */}
+              <circle cx="42" cy="85.5" r="3.5" fill="url(#goldGrad)" stroke="#0a0a0a" strokeWidth="1" />
+              
+              {/* Cicada head with large dual-lens compound eyes */}
+              <path d="M 41,25 C 41,18, 59,18, 59,25 L 56,28 C 52,30, 48,30, 44,28 Z" fill="url(#goldGrad)" />
+              {/* Eyes */}
+              <circle cx="39" cy="21.5" r="3" fill="url(#goldGrad)" />
+              <circle cx="61" cy="21.5" r="3" fill="url(#goldGrad)" />
+              {/* Small details on head */}
+              <path d="M 47,19 L 53,19" stroke="url(#goldGrad)" strokeWidth="1" />
+              
+              {/* Left wing (Large superior wing) */}
+              <path d="M 44,30 C 26,22, 13,31, 14,39 C 18,44, 28,45, 43,36 Z" fill="url(#goldWing)" />
+              {/* Left secondary lower wing */}
+              <path d="M 44,35 C 37,36, 31,44, 34,47 C 37,48, 41,44, 45,38 Z" fill="url(#goldGrad)" opacity="0.9" />
+              
+              {/* Right wing (Large superior wing) */}
+              <path d="M 56,30 C 74,22, 87,31, 86,39 C 82,44, 72,45, 57,36 Z" fill="url(#goldWing)" />
+              {/* Right secondary lower wing */}
+              <path d="M 56,35 C 63,36, 69,44, 66,47 C 63,48, 59,44, 55,38 Z" fill="url(#goldGrad)" opacity="0.9" />
+              
+              {/* Central body structure (Thorax connecting head & abdomen) */}
+              <path d="M 45,28 C 45,28, 50,33, 55,28 L 54,36 C 54,36, 50,38, 46,36 Z" fill="url(#goldGrad)" />
+              
+              {/* Segmented Abdomen structure */}
+              <path d="M 46,36 L 54,36 L 53,44 L 47,44 Z" fill="url(#goldGrad)" />
+              <path d="M 47,44 L 53,44 L 52,51 L 48,51 Z" fill="url(#goldGrad)" />
+              <path d="M 48,51 L 52,51 L 51,58 L 49,58 Z" fill="url(#goldGrad)" />
+              <path d="M 49,58 L 51,58 L 50.5,65 L 49.5,65 Z" fill="url(#goldGrad)" />
+              <path d="M 49.5,65 L 50.5,65 L 50,71 Z" fill="url(#goldGrad)" />
+              
+              {/* Small signal transmitter at bottom tip */}
+              <circle cx="50" cy="74.5" r="1.5" fill="url(#goldGrad)" />
+              
+              {/* Beautiful Play Button symbol nested inside the thorax center */}
+              <polygon points="48.5,40.5 48.5,46.5 53.5,43.5" fill="#0a0a0a" />
+            </svg>
           </div>
-          <span className="text-xl font-bold tracking-tight text-white font-sans">
-            CICADA <span className="text-emerald-500 font-extrabold font-black">TUBE</span>
+          <span className="text-xl font-extrabold tracking-tight text-white font-sans">
+            <span className="bg-gradient-to-r from-amber-300 via-yellow-400 to-amber-250 bg-clip-text text-transparent filter drop-shadow-[0_2px_4px_rgba(0,0,0,0.4)]">CICADA</span>{" "}
+            <span className="text-[#10b981] font-black">TUBE</span>
           </span>
         </div>
 
@@ -517,15 +585,49 @@ export default function Header({
           </button>
         )}
 
+        {/* Pi Network Sign-In Trigger or Status */}
+        {piUser ? (
+          <div
+            id="pi-synced-badge"
+            className="flex items-center space-x-1.5 rounded-full bg-gradient-to-r from-amber-500/15 to-yellow-500/5 border border-amber-500/30 px-3.5 py-1.5 text-xs font-bold text-amber-400 font-sans shadow-[0_2px_10px_rgba(230,160,20,0.1)] shrink-0"
+          >
+            <span className="font-extrabold text-[#f3bd3a] text-sm leading-none shrink-0">π</span>
+            <span className="truncate max-w-[100px]">@{piUser.username}</span>
+          </div>
+        ) : (
+          <button
+            id="pi-signin-btn"
+            onClick={onPiAuthTrigger}
+            disabled={piAuthLoading}
+            className={`flex items-center space-x-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition active:scale-95 border shrink-0 ${
+              piAuthLoading
+                ? "bg-zinc-900 border-zinc-805 text-zinc-500 cursor-not-allowed"
+                : "bg-gradient-to-r from-amber-500 to-yellow-500 text-zinc-950 border-amber-400/30 hover:from-amber-400 hover:to-yellow-400 shadow-[0_4px_12px_rgba(245,158,11,0.2)]"
+            }`}
+          >
+            {piAuthLoading ? (
+              <>
+                <div className="w-3 h-3 border-2 border-zinc-500 border-t-zinc-300 rounded-full animate-spin shrink-0" />
+                <span>Syncing π...</span>
+              </>
+            ) : (
+              <>
+                <span className="font-extrabold text-sm leading-none shrink-0">π</span>
+                <span>Sync Pi</span>
+              </>
+            )}
+          </button>
+        )}
+
         {/* Profile Avatar Widget */}
         <div
           id="profile-container"
-          onClick={() => onNavigateToUser("m.tealieb2014")}
-          className="flex items-center space-x-2 border-l border-zinc-800 pl-3.5 cursor-pointer hover:opacity-80 transition"
+          onClick={() => onNavigateToUser(piUser ? piUser.username : "m.tealieb2014")}
+          className="flex items-center space-x-2 border-l border-zinc-800 pl-3.5 cursor-pointer hover:opacity-80 transition shrink-0"
         >
           <div className="relative h-8 w-8 overflow-hidden rounded-full border border-emerald-500/40 bg-zinc-900 hover:border-emerald-400 transition">
-            <div className="flex h-full w-full items-center justify-center text-xs font-bold text-emerald-400 bg-gradient-to-tr from-emerald-500/20 to-teal-400/10">
-              M
+            <div className="flex h-full w-full items-center justify-center text-xs font-bold text-emerald-400 bg-gradient-to-tr from-emerald-500/20 to-teal-400/10 uppercase">
+              {(piUser ? piUser.username : "m.tealieb2014").charAt(0)}
             </div>
             {wallet.isPremiumUser && (
               <div className="absolute -bottom-0.5 -right-0.5 flex h-3 w-3 items-center justify-center rounded-full bg-emerald-500 text-[6px] font-bold text-zinc-950 border border-zinc-950">
@@ -534,7 +636,9 @@ export default function Header({
             )}
           </div>
           <div className="hidden xl:flex flex-col text-left">
-            <span className="font-sans text-xs font-semibold text-zinc-200">m.tealieb2014</span>
+            <span className="font-sans text-xs font-semibold text-zinc-200">
+              {piUser ? piUser.username : "m.tealieb2014"}
+            </span>
             <span className="font-mono text-[9px] text-zinc-500 uppercase font-bold leading-tight">
               {wallet.isPremiumUser ? "Premium Node" : "Free Explorer"}
             </span>

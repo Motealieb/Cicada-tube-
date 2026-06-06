@@ -4,7 +4,7 @@
  */
 
 import React from "react";
-import { Home, Tv, Film, Wallet, ShieldCheck, HeartHandshake, Users, Sparkles } from "lucide-react";
+import { Home, Tv, Film, Wallet, ShieldCheck, HeartHandshake, Users, Sparkles, Sliders } from "lucide-react";
 
 interface SidebarProps {
   activeTab: string;
@@ -29,10 +29,22 @@ export default function Sidebar({
       description: "Explore recommendations",
     },
     {
+      id: "dashboard",
+      label: "User Dashboard",
+      icon: Sliders,
+      description: "Statistics & sound syner",
+    },
+    {
       id: "live",
       label: "Live Broadcasts",
       icon: Tv,
       description: "Periodical live streams",
+    },
+    {
+      id: "register",
+      label: "Register Node",
+      icon: ShieldCheck,
+      description: "Initialize transmission",
     },
     {
       id: "studio",

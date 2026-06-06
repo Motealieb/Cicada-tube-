@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useRef } from "react";
-import { Video, Comment, UserWallet } from "../types";
+import { Video, Comment, UserWallet, Advertisement } from "../types";
 import {
   Play,
   Pause,
@@ -36,6 +36,12 @@ interface VideoPlayerProps {
   likedVideoIds: string[];
   onToggleLikeVideo: (videoId: string) => void;
   onNavigateToUser: (username: string) => void;
+  onPiTipCreator?: (amount: number, callback: (success: boolean) => void) => void;
+  onUpdateWatchProgress?: (videoId: string, progressPercent: number) => void;
+  piUser?: { username: string; uid: string } | null;
+  onAddComment?: (videoId: string, comment: Comment) => void;
+  onLikeComment?: (videoId: string, commentId: string, liked: boolean) => void;
+  advertisements?: Advertisement[];
 }
 
 export default function VideoPlayer({
@@ -49,16 +55,24 @@ export default function VideoPlayer({
   likedVideoIds,
   onToggleLikeVideo,
   onNavigateToUser,
+  onPiTipCreator,
+  onUpdateWatchProgress,
+  piUser,
+  onAddComment,
+  onLikeComment,
+  advertisements = [],
 }: VideoPlayerProps) {
   const [isPlaying, setIsPlaying] = useState<boolean>(true);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [volume, setVolume] = useState<number>(0.75);
   const [currentTime, setCurrentTime] = useState<number>(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
+  const [resolution, setResolution] = useState<string>("1080p");
   
   // Global liking derivation
   const isLiked = likedVideoIds.includes(video.id);
   const [showShareTooltip, setShowShareTooltip] = useState<boolean>(false);
+  const currentUsername = piUser ? piUser.username : "m.tealieb2014";
 
   // Comments state
   const [localComments, setLocalComments] = useState<Comment[]>(video.comments);
@@ -67,18 +81,24 @@ export default function VideoPlayer({
 
   const handleToggleLikeComment = (commentId: string) => {
     const isCommentLiked = likedCommentIds.includes(commentId);
+    let newLiked = false;
     if (isCommentLiked) {
       setLikedCommentIds((prev) => prev.filter((id) => id !== commentId));
       setLocalComments((prev) =>
         prev.map((c) => (c.id === commentId ? { ...c, likes: Math.max(0, c.likes - 1) } : c))
       );
       triggerSound(350, 80, "sine");
+      newLiked = false;
     } else {
       setLikedCommentIds((prev) => [...prev, commentId]);
       setLocalComments((prev) =>
         prev.map((c) => (c.id === commentId ? { ...c, likes: c.likes + 1 } : c))
       );
       triggerSound(880, 80, "sine");
+      newLiked = true;
+    }
+    if (onLikeComment) {
+      onLikeComment(video.id, commentId, newLiked);
     }
   };
 
@@ -90,6 +110,8 @@ export default function VideoPlayer({
   const [adActive, setAdActive] = useState<boolean>(false);
   const [adTimeRemaining, setAdTimeRemaining] = useState<number>(5);
   const [adsEncountered, setAdsEncountered] = useState<boolean>(false);
+  const [activeAd, setActiveAd] = useState<Advertisement | null>(null);
+  const [adClickedMessage, setAdClickedMessage] = useState<string>("");
 
   // Ref pointers
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -112,17 +134,40 @@ export default function VideoPlayer({
     setCurrentTime(0);
     setTipSuccessMsg("");
     setTipErrorMsg("");
+    setAdClickedMessage("");
     
     // Trigger ad if monetized and NOT premium, only if not yet encountered
     if (video.monetized && !isPremiumUser && !adsEncountered) {
       setAdActive(true);
       setAdTimeRemaining(6);
       setIsPlaying(false);
+      
+      // Select an advertisement dynamically
+      if (advertisements && advertisements.length > 0) {
+        const randomIndex = Math.floor(Math.random() * advertisements.length);
+        const chosenAd = advertisements[randomIndex];
+        setActiveAd(chosenAd);
+        // Safely record impression locally
+        chosenAd.impressions = (chosenAd.impressions || 0) + 1;
+      } else {
+        setActiveAd({
+          id: "default-ad-1",
+          brandName: "CICADA SPRAY REPELLENT INC.",
+          slogan: "Keeping Swarms Safe and Quiet Nationwide",
+          actionText: "Quiet Swarms Now",
+          themeColor: "amber",
+          cost: 0,
+          creator: "Cicada Network",
+          impressions: 42000,
+          clicks: 1240,
+          createdAt: ""
+        });
+      }
     } else {
       setAdActive(false);
       setIsPlaying(true);
     }
-  }, [video, isPremiumUser]);
+  }, [video, isPremiumUser, advertisements]);
 
   // Ad timer count
   useEffect(() => {
@@ -205,6 +250,14 @@ export default function VideoPlayer({
     return () => clearInterval(interval);
   }, [isPlaying, adActive, totalSeconds, playbackSpeed, video, isMuted, volume]);
 
+  // Synchronize watch progress state back to parent container
+  useEffect(() => {
+    if (onUpdateWatchProgress && totalSeconds > 0) {
+      const percentage = Math.min(100, Math.round((currentTime / totalSeconds) * 100));
+      onUpdateWatchProgress(video.id, percentage);
+    }
+  }, [currentTime, totalSeconds, video.id, onUpdateWatchProgress]);
+
   // Canvas render animation loop
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -213,8 +266,23 @@ export default function VideoPlayer({
     if (!ctx) return;
 
     let frameCount = 0;
-    canvas.width = 720;
-    canvas.height = 405;
+    
+    // Set dynamic simulated stream source resolution
+    let renderW = 1280;
+    let renderH = 720;
+    if (resolution === "1085p" || resolution === "1080p") {
+      renderW = 1920;
+      renderH = 1080;
+    } else if (resolution === "480p") {
+      renderW = 640;
+      renderH = 360; // low resolution scaling looks blockier
+    } else if (resolution === "720p") {
+      renderW = 1280;
+      renderH = 720;
+    }
+    
+    canvas.width = renderW;
+    canvas.height = renderH;
 
     const render = () => {
       frameCount++;
@@ -226,11 +294,20 @@ export default function VideoPlayer({
       ctx.fillRect(0, 0, w, h);
 
       if (adActive) {
+        // Map theme color of the chosen advertisement campaign
+        const adColor = activeAd?.themeColor === "emerald" 
+          ? { primary: "#10b981", rgb: "16, 185, 129" }
+          : activeAd?.themeColor === "crimson"
+          ? { primary: "#ef4444", rgb: "239, 68, 68" }
+          : activeAd?.themeColor === "blue"
+          ? { primary: "#0ea5e9", rgb: "14, 165, 233" }
+          : { primary: "#f59e0b", rgb: "245, 158, 11" }; // amber default
+
         // Draw Ad Graphic visualizer
-        ctx.fillStyle = "rgba(245, 158, 11, 0.05)";
+        ctx.fillStyle = `rgba(${adColor.rgb}, 0.05)`;
         ctx.fillRect(0, 0, w, h);
 
-        ctx.strokeStyle = "rgba(245, 158, 11, 0.2)";
+        ctx.strokeStyle = `rgba(${adColor.rgb}, 0.2)`;
         ctx.lineWidth = 2;
         ctx.beginPath();
         for (let i = 0; i < w; i += 20) {
@@ -240,16 +317,16 @@ export default function VideoPlayer({
         ctx.stroke();
 
         ctx.font = "bold 20px sans-serif";
-        ctx.fillStyle = "#f59e0b";
+        ctx.fillStyle = adColor.primary;
         ctx.textAlign = "center";
-        ctx.fillText("CICADA SPRAY REPELLENT INC.", w / 2, h / 2 - 30);
+        ctx.fillText(activeAd?.brandName || "CICADA CORPS SPONSOR", w / 2, h / 2 - 30);
 
         ctx.font = "13px monospace";
         ctx.fillStyle = "#a1a1aa";
-        ctx.fillText("Keeping Swarms Safe and Quiet Nationwide", w / 2, h / 2);
+        ctx.fillText(activeAd?.slogan || "Always Supporting Organic Decibels", w / 2, h / 2);
 
-        // Rotating golden shield
-        ctx.strokeStyle = "#f59e0b";
+        // Rotating campaign orb shield
+        ctx.strokeStyle = adColor.primary;
         ctx.lineWidth = 1.5;
         ctx.beginPath();
         ctx.arc(w / 2, h / 2 + 60, 20 + Math.sin(frameCount * 0.05) * 5, 0, Math.PI * 2);
@@ -408,7 +485,7 @@ export default function VideoPlayer({
               ctx.strokeStyle = `rgba(245, 158, 11, ${Math.max(0, 1 - r / 360) * 0.15})`;
               ctx.lineWidth = 1.5;
               ctx.beginPath();
-              ctx.arc(w / 2, h / 2, r, 0, Math.PI * 2);
+              ctx.arc(w / 2, r, r, 0, Math.PI * 2);
               ctx.stroke();
             }
 
@@ -425,6 +502,59 @@ export default function VideoPlayer({
             ctx.fill();
             break;
         }
+      }
+
+      // Draw resolution compression effects on the stream if quality is lower than HD
+      if (resolution === "480p" && !adActive) {
+        // Draw compression macroblocks (creative and high-impact)
+        if (Math.random() > 0.35 && isPlaying) {
+          ctx.fillStyle = "rgba(0, 0, 0, 0.08)";
+          const blockSize = 64;
+          const cols = Math.ceil(w / blockSize);
+          const rows = Math.ceil(h / blockSize);
+          // Scatter 8 artifacts
+          for (let k = 0; k < 6; k++) {
+            const rx = Math.floor(Math.random() * cols) * blockSize;
+            const ry = Math.floor(Math.random() * rows) * blockSize;
+            ctx.fillRect(rx, ry, blockSize, blockSize);
+          }
+        }
+        
+        // Add random static noise dots
+        ctx.fillStyle = "rgba(255, 255, 255, 0.04)";
+        for (let j = 0; j < 35; j++) {
+          const px = Math.random() * w;
+          const py = Math.random() * h;
+          ctx.fillRect(px, py, 2.5, 2.5);
+        }
+      }
+
+      // Live watermark matching selected resolution
+      if (!adActive) {
+        ctx.fillStyle = "rgba(10, 10, 10, 0.75)";
+        ctx.fillRect(w - 240, 20, 220, 28);
+        
+        let strokeColor = "rgba(234, 179, 8, 0.6)"; // Amber gold for 1080p
+        let fontColor = "#fbbf24";
+        let tierLabel = "Ultra HD 1080p";
+        if (resolution === "720p") {
+          strokeColor = "rgba(16, 185, 129, 0.6)"; // Emerald green for 720p
+          fontColor = "#34d399";
+          tierLabel = "HD 720p Ready";
+        } else if (resolution === "480p") {
+          strokeColor = "rgba(161, 161, 170, 0.4)"; // Gray for 480p
+          fontColor = "#a1a1aa";
+          tierLabel = "SD 480p Bandwidth";
+        }
+
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(w - 240, 20, 220, 28);
+
+        ctx.font = "bold 10px monospace";
+        ctx.textAlign = "center";
+        ctx.fillStyle = fontColor;
+        ctx.fillText(`STREAM: ${tierLabel}`, w - 130, 37);
       }
 
       // Draw standard play/paused visual indicators on canvas center briefly if altered
@@ -448,7 +578,7 @@ export default function VideoPlayer({
     return () => {
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
-  }, [video, isPlaying, adActive]);
+  }, [video, isPlaying, adActive, resolution]);
 
   // Handle subscriber clicking
   const handleToggleSubscribe = () => {
@@ -476,7 +606,7 @@ export default function VideoPlayer({
 
     const newComment: Comment = {
       id: `comment-u-${Date.now()}`,
-      author: "m.tealieb2014",
+      author: currentUsername,
       avatarColor: "bg-amber-500",
       text: commentInput.trim(),
       likes: 0,
@@ -486,6 +616,51 @@ export default function VideoPlayer({
     setLocalComments([newComment, ...localComments]);
     setCommentInput("");
     triggerSound(440, 120, "triangle");
+
+    if (onAddComment) {
+      onAddComment(video.id, newComment);
+    }
+  };
+
+  const [piTipLoading, setPiTipLoading] = useState<boolean>(false);
+
+  const handlePiTipCreator = (val: number) => {
+    if (!onPiTipCreator) {
+      setTipErrorMsg("Your Pi wallet must be synced, or credentials fully loaded, to use Pi payments.");
+      setTimeout(() => setTipErrorMsg(""), 5000);
+      return;
+    }
+    setPiTipLoading(true);
+    setTipSuccessMsg("");
+    setTipErrorMsg("");
+    onPiTipCreator(val, (success) => {
+      setPiTipLoading(false);
+      if (success) {
+        setTipSuccessMsg(`Success! Synced blockchain ledger: Paid ${val} π to ${video.uploaderName}!`);
+        triggerSound(1800, 350, "sine");
+        setTimeout(() => setTipSuccessMsg(""), 6000);
+        
+        // Inject creator response simulation to thread context!
+        setTimeout(() => {
+          const creatorCommentResponse: Comment = {
+            id: `comment-pi-t-${Date.now()}`,
+            author: video.uploaderName,
+            avatarColor: "bg-emerald-600",
+            text: `Wow, thank you so much for the real Pi tip of ${val} π! Having true peer-to-peer web3 backing is an absolute game-changer! 🚀🪙`,
+            likes: 12,
+            timestamp: "Just now",
+            isCreator: true,
+          };
+          setLocalComments((prev) => [creatorCommentResponse, ...prev]);
+          if (onAddComment) {
+            onAddComment(video.id, creatorCommentResponse);
+          }
+        }, 1500);
+      } else {
+        setTipErrorMsg("Pi checkout failed: transaction cancelled or declined by server.");
+        setTimeout(() => setTipErrorMsg(""), 6000);
+      }
+    });
   };
 
   // Creator tipping flow
@@ -508,12 +683,15 @@ export default function VideoPlayer({
           id: `comment-t-${Date.now()}`,
           author: video.uploaderName,
           avatarColor: "bg-emerald-600",
-          text: `Thank you so much m.tealieb2014 for your wonderful tip of $${amount}! This support fuels my channel. 💚`,
+          text: `Thank you so much ${currentUsername} for your wonderful tip of $${amount}! This support fuels my channel. 💚`,
           likes: 5,
           timestamp: "Just now",
           isCreator: true,
         };
         setLocalComments((prev) => [creatorCommentResponse, ...prev]);
+        if (onAddComment) {
+          onAddComment(video.id, creatorCommentResponse);
+        }
       }, 1500);
     } else {
       setTipSuccessMsg("");
@@ -546,11 +724,11 @@ export default function VideoPlayer({
           {/* Ad countdown overlay interface */}
           {adActive && (
             <div className="absolute inset-0 z-25 flex flex-col justify-between p-4 bg-gradient-to-t from-zinc-950 via-transparent to-zinc-950">
-              <div className="flex justify-between items-center bg-zinc-900/90 rounded-xl px-4 py-2 border border-emerald-500/10">
+              <div className="flex justify-between items-center bg-zinc-900/95 rounded-xl px-4 py-2 border border-zinc-800 shadow-md">
                 <div className="flex items-center space-x-2">
                   <div className="h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
-                  <span className="font-mono text-xs font-bold text-emerald-400 uppercase tracking-widest">
-                    Sponsored Ad Stream
+                  <span className="font-mono text-[10px] font-bold text-emerald-400 uppercase tracking-widest truncate max-w-[180px] sm:max-w-none">
+                    Sponsored Ad Stream • {activeAd?.brandName || "CICADA CORPS"}
                   </span>
                 </div>
                 {!isPremiumUser && (
@@ -564,16 +742,56 @@ export default function VideoPlayer({
                 )}
               </div>
 
+              {/* Dynamic Campaign Card content in middle */}
+              <div className="flex flex-col items-start bg-zinc-950/90 border border-zinc-900 rounded-xl p-4 max-w-sm backdrop-blur-md self-start text-left ml-2 sm:ml-4 shadow-xl translate-y-2 animate-fade-in">
+                <div className="flex items-center space-x-2">
+                  <span className="text-[9px] uppercase font-bold tracking-widest text-emerald-500 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20">
+                    Campaign Partner
+                  </span>
+                  <span className="font-mono text-[8px] text-zinc-500">Node Ref #{activeAd?.id.substring(0, 8)}</span>
+                </div>
+                <h3 className="text-zinc-100 font-bold text-sm tracking-tight mt-1.5">{activeAd?.brandName || "Cicada Corp Private Sponsor"}</h3>
+                <p className="text-zinc-400 text-xs mt-1 leading-relaxed font-normal">{activeAd?.slogan || "Always Supporting Open-Decibel Streams Worldwide"}</p>
+                
+                {adClickedMessage ? (
+                  <div className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1.5 mt-3 rounded-lg leading-snug animate-fade-in">
+                    {adClickedMessage}
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (activeAd) {
+                        activeAd.clicks = (activeAd.clicks || 0) + 1;
+                        triggerSound(880, 80, "sine");
+                        setAdClickedMessage(`🚀 Visited campaign link! CTA action: "${activeAd.actionText}" registered successfully inside index ledger.`);
+                        setTimeout(() => setAdClickedMessage(""), 4500);
+                      }
+                    }}
+                    className="flex items-center space-x-2 mt-3.5 py-1.5 px-3.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 text-[11px] font-bold transition shadow-lg shrink-0 border border-emerald-400/20"
+                  >
+                    <span>{activeAd?.actionText || "Get Started"}</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </button>
+                )}
+                
+                <span className="text-[9px] font-mono text-zinc-550 mt-2 block">
+                  Financed by creator @{activeAd?.creator || "System"}. Cost allocation: ${activeAd?.cost.toFixed(2) || "0.00"}
+                </span>
+              </div>
+
               {/* Countdown actions bottom panel */}
-              <div className="flex justify-end items-end w-full">
+              <div className="flex justify-between items-center w-full px-2">
+                <span className="text-[9px] font-mono text-zinc-500 hidden sm:inline">
+                  Any user can publish an ad from the "Wallet & Ads" dashboard.
+                </span>
                 {adTimeRemaining > 1 ? (
-                  <div className="rounded-lg bg-zinc-900/95 border border-zinc-800 px-4 py-2 font-mono text-xs text-zinc-350">
+                  <div className="rounded-lg bg-zinc-900/95 border border-zinc-800 px-4 py-2 font-mono text-xs text-zinc-350 ml-auto">
                     Video resumes in <span className="text-emerald-500 font-bold">{adTimeRemaining - 1}s</span>
                   </div>
                 ) : (
                   <button
                     onClick={handleCompleteAd}
-                    className="flex items-center space-x-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 py-2 font-mono text-xs font-bold transition shadow-lg active:scale-95"
+                    className="flex items-center space-x-1.5 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 px-4 py-2 font-mono text-xs font-bold transition shadow-lg active:scale-95 ml-auto"
                   >
                     <span>Skip Video Ad</span>
                     <Check className="h-3.5 w-3.5" />
@@ -645,8 +863,27 @@ export default function VideoPlayer({
                 )}
               </div>
 
-              {/* Speed configurations */}
+              {/* Speed & Quality configurations */}
               <div className="flex items-center space-x-3.5">
+                {/* Resolution Quality Selector */}
+                <div className="flex items-center space-x-1 border border-zinc-800 rounded px-1.5 py-0.5 bg-zinc-900/60 font-mono text-[10px]">
+                  <span className="text-zinc-500">Quality:</span>
+                  <select
+                    id="video-resolution-select"
+                    className="outline-none bg-transparent hover:text-zinc-100 text-zinc-300 text-[10px] text-center cursor-pointer font-bold border-none"
+                    value={resolution}
+                    onChange={(e) => {
+                      setResolution(e.target.value);
+                      triggerSound(950, 60, "sine");
+                    }}
+                    title="Change video stream resolution quality"
+                  >
+                    <option value="1080p" className="bg-zinc-900 text-zinc-300">1080p (FHD)</option>
+                    <option value="720p" className="bg-zinc-900 text-zinc-300">720p (HD)</option>
+                    <option value="480p" className="bg-zinc-900 text-zinc-300">480p (SD)</option>
+                  </select>
+                </div>
+
                 <div className="flex items-center space-x-1 border border-zinc-800 rounded px-1.5 py-0.5 bg-zinc-900/60 font-mono text-[10px]">
                   <span className="text-zinc-500">Speed:</span>
                   <select
@@ -821,6 +1058,43 @@ export default function VideoPlayer({
                 </button>
               ))}
             </div>
+
+            {/* Pi Network Tipping Option */}
+            <div className="flex items-center space-x-2 my-2 mt-3">
+              <div className="h-px bg-zinc-900 flex-1"></div>
+              <span className="font-sans text-[10px] font-bold text-amber-500 uppercase tracking-wider flex items-center space-x-1 shrink-0">
+                <span className="text-amber-400 font-extrabold text-xs">π</span>
+                <span>or support with Pi Blockchain network</span>
+              </span>
+              <div className="h-px bg-zinc-900 flex-1"></div>
+            </div>
+
+            <div className="grid grid-cols-4 gap-2.5">
+              {[0.1, 0.5, 1.0, 5.0].map((val) => (
+                <button
+                  key={`pi-tip-${val}`}
+                  id={`btn-pi-tip-${val}`}
+                  disabled={piTipLoading}
+                  onClick={() => handlePiTipCreator(val)}
+                  className={`flex flex-col items-center justify-center rounded-xl border p-2.5 transition active:scale-95 ${
+                    piTipLoading
+                      ? "border-zinc-900 bg-zinc-950/40 text-zinc-600 cursor-not-allowed"
+                      : "border-amber-500/20 bg-amber-500/5 hover:border-amber-400 hover:bg-amber-500/10 text-amber-400"
+                  }`}
+                >
+                  {piTipLoading ? (
+                    <div className="w-4 h-4 border-2 border-amber-500/20 border-t-amber-400 rounded-full animate-spin my-1" />
+                  ) : (
+                    <span className="font-extrabold text-amber-400 text-sm font-sans my-0.5">π</span>
+                  )}
+                  <span className="font-mono font-bold text-xs text-zinc-100">{val} π</span>
+                  <span className="font-mono text-[8.5px] text-amber-500/80 mt-0.5 uppercase tracking-wide">
+                    {piTipLoading ? "Syncing" : "Send Pi"}
+                  </span>
+                </button>
+              ))}
+            </div>
+
 
             {/* Error and success reporting grids */}
             {tipSuccessMsg && (
